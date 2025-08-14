@@ -25,6 +25,16 @@ class LocationProvider with ChangeNotifier {
   String? get error => _error;
   Set<Marker> get markers => _markers;
 
+  void setPickupAddress(String address) {
+    _pickupAddress = address;
+    notifyListeners();
+  }
+
+  void setDropAddress(String address) {
+    _dropAddress = address;
+    notifyListeners();
+  }
+
   Future<bool> requestLocationPermission() async {
     try {
       if (kIsWeb) {
@@ -80,10 +90,10 @@ class LocationProvider with ChangeNotifier {
       
     } catch (e) {
       _error = 'Failed to get current location: $e';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-
-    _isLoading = false;
-    notifyListeners();
   }
 
   String _formatAddress(Placemark place) {
@@ -147,10 +157,14 @@ class LocationProvider with ChangeNotifier {
         print('Error getting placemarks: $e');
         if (isPickup) {
           _pickupLocation = position;
-          _pickupAddress = 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+          if (_pickupAddress == null) {
+            _pickupAddress = 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+          }
         } else {
           _dropLocation = position;
-          _dropAddress = 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+          if (_dropAddress == null) {
+            _dropAddress = 'Location (${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)})';
+          }
         }
         updateMarkerPosition(position, isPickup);
         notifyListeners();
@@ -163,10 +177,14 @@ class LocationProvider with ChangeNotifier {
         
         if (isPickup) {
           _pickupLocation = position;
-          _pickupAddress = address;
+          if (_pickupAddress == null) {
+            _pickupAddress = address;
+          }
         } else {
           _dropLocation = position;
-          _dropAddress = address;
+          if (_dropAddress == null) {
+            _dropAddress = address;
+          }
         }
 
         updateMarkerPosition(position, isPickup);
@@ -199,39 +217,12 @@ class LocationProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<List<String>> searchPlaces(String query) async {
-    if (query.isEmpty) return [];
-
-    try {
-      return [
-        '$query, Near City Mall',
-        '$query Market',
-        '$query Junction',
-        '$query Main Road',
-        'New $query Colony',
-        'Old $query Area',
-        '$query Complex',
-        '$query Bus Stop',
-        '$query Metro Station',
-        '$query Shopping Center',
-      ].where((place) => place.toLowerCase().contains(query.toLowerCase())).toList();
-    } catch (e) {
-      _error = 'Failed to search places: $e';
-      notifyListeners();
-      return [];
-    }
-  }
-
-  Future<void> saveRecentLocation(String address) async {
-    print('Saved recent location: $address');
-  }
-
   double calculateDistance(LatLng from, LatLng to) {
     return Geolocator.distanceBetween(
       from.latitude,
       from.longitude,
       to.latitude,
       to.longitude,
-    ) / 1000;
+    ) / 1000; // Convert to kilometers
   }
 }
